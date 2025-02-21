@@ -1,0 +1,22 @@
+[project]
+name = "glycocalyx"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cmdstanpy>=1.2.5",
+    "matplotlib>=3.10.0",
+    "polars[pyarrow]>=1.22.0",
+]
+
+[tool.ruff]
+line-length = 80
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/glycocalyx"]
+ 
