@@ -5,9 +5,9 @@ import arviz as az
 import polars as pl
 
 ROOT = Path(__file__).parent.parent.parent
-DATA_FILE = ROOT / "data" / "prepared" / "measurements_grouped.csv"
+DATA_FILE = ROOT / "data" / "prepared" / "contours.csv"
 STAN_FILE = ROOT / "src" / "glycocalyx" / "model.stan"
-OUTPUT_FILE = ROOT / "data" / "idata_grouped.nc"
+OUTPUT_FILE = ROOT / "data" / "idata.nc"
 
 
 def jsonize(d: dict):
@@ -25,16 +25,35 @@ def jsonize(d: dict):
     return {k: jsonize_value(v) for k, v in d.items()}
 
 
+VesselType = pl.Enum(["pa", "pea", "bp_a", "bp_v", "pv", "av"])
+LectinVesselType = pl.Enum(
+    [
+        "lea:pa",
+        "wga:pa",
+        "lea:pea",
+        "wga:pea",
+        "lea:bp_a",
+        "wga:bp_a",
+        "lea:bp_v",
+        "wga:bp_v",
+        "lea:pv",
+        "wga:pv",
+        "lea:av",
+        "wga:av",
+    ]
+)
+
+
 def main():
     msts = (
         pl.read_csv(DATA_FILE)
         .with_columns(
             lectin=pl.col("lectin").cast(pl.Categorical),
             mouse=pl.col("mouse").cast(pl.Categorical),
-            vessel_type=pl.col("vessel_type").cast(pl.Categorical),
+            vessel_type=pl.col("vessel_type").cast(VesselType),
             lectin_vessel_type=pl.concat_str(
                 [pl.col("lectin"), pl.col("vessel_type")], separator=":"
-            ).cast(pl.Categorical),
+            ).cast(LectinVesselType),
         )
         .with_row_index()
     )
@@ -49,7 +68,7 @@ def main():
                 msts["lectin_vessel_type"].cat.get_categories()
             ),
             "size": msts["size"],
-            "y": msts["ln_y_std_mean"],
+            "y": msts["ln_y_norm_mean_std"],
             "lectin": msts["lectin"].to_physical() + 1,
             "mouse": msts["mouse"].to_physical() + 1,
             "vessel_type": msts["vessel_type"].to_physical() + 1,
@@ -76,7 +95,7 @@ def main():
         chains=4,
         iter_warmup=1000,
         iter_sampling=1000,
-        adapt_delta=0.99,
+        adapt_delta=0.999,
         max_treedepth=11,
     )
     idata = az.from_cmdstanpy(
@@ -86,7 +105,7 @@ def main():
         coords=coords,
         dims=dims,
     )
-    print(az.summary(idata, var_names=["~yrep"], filter_vars="regex"))
+    print(az.summary(idata, var_names=["~yrep", "~free"], filter_vars="regex"))
     idata.to_netcdf(str(OUTPUT_FILE))
 
 

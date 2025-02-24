@@ -1,66 +1,14 @@
 from pathlib import Path
-from typing import Iterable
 
 import arviz as az
-import numpy as np
 import polars as pl
 from matplotlib import pyplot as plt
 
 
 ROOT = Path(__file__).parent.parent.parent
-DATA_FILE = ROOT / "data" / "prepared" / "measurements_grouped.csv"
-IDATA_FILE = ROOT / "data" / "idata_grouped.nc"
+DATA_FILE = ROOT / "data" / "prepared" / "contours.csv"
+IDATA_FILE = ROOT / "data" / "idata.nc"
 PLOT_DIR = ROOT / "plots"
-
-
-def histogram(msts: pl.DataFrame, groupcol: str = "mouse"):
-    f, axes = plt.subplots(1, 2, figsize=(10, 5))
-    for ax, col in zip(axes, ["ln_y_std", "ln_y_norm_std"]):
-        min = float(msts[col].cast(float).min())  # pyright: ignore[reportArgumentType]
-        max = float(msts[col].cast(float).max())  # pyright: ignore[reportArgumentType]
-        bins = np.linspace(min, max, 50)
-        for vt, subdf in msts.group_by(groupcol):
-            _ = ax.hist(
-                subdf[col],
-                bins=bins,
-                label=vt,
-                alpha=0.8,
-            )
-        ax.legend(frameon=False, title=groupcol)
-    return f, axes
-
-
-def plot_residuals(
-    msts: pl.DataFrame,
-    idata: az.InferenceData,
-    groups: Iterable[str | Iterable[str]],
-):
-    resids = pl.from_pandas(
-        (
-            idata.posterior_predictive["ln_y_std"]  # pyright: ignore[reportAttributeAccessIssue]
-            - idata.observed_data["ln_y_std"]  # pyright: ignore[reportAttributeAccessIssue]
-        )
-        .rename("resid")
-        .to_dataframe()
-        .reset_index()
-    ).join(msts.with_row_index(), left_on="__obs__", right_on="index")
-    bins = np.linspace(resids["resid"].min(), resids["resid"].max(), 50)
-    figs = []
-    for group in groups:
-        f, ax = plt.subplots(figsize=[8, 5])
-        for group_name, subdf in resids.group_by(group):
-            ax.hist(
-                subdf["resid"],
-                density=True,
-                bins=bins,
-                alpha=0.7,
-                label=str(group_name),
-            )
-        title = group if isinstance(group, str) else ", ".join(group)
-        ax.set_title(title)
-        ax.legend(frameon=False)
-        figs.append((f, ax))
-    return figs
 
 
 def forestplot(ax, ts, xlabel="Distribution of posterior samples"):
@@ -73,7 +21,7 @@ def forestplot(ax, ts, xlabel="Distribution of posterior samples"):
     return ax
 
 
-def resid_scatter(msts, idata, qlow=0.01, qhigh=0.99):
+def resid_scatter(msts, idata, qlow=0.01, qhigh=0.99, colorcol="lectin"):
     dim = ["chain", "draw"]
     points = msts.with_columns(
         qlow=idata.posterior_predictive["yrep"].quantile(qlow, dim=dim).values,
@@ -82,23 +30,25 @@ def resid_scatter(msts, idata, qlow=0.01, qhigh=0.99):
         .values,
     )
     f, ax = plt.subplots()
-    ax.scatter(
-        points["size"],
-        points["ln_y_std_mean"],
-        color="black",
-        label="Average observed value in ROI",
-    )
+    for (groupname,), subdf in points.group_by(colorcol):
+        ax.scatter(
+            subdf["size"],
+            subdf["ln_y_norm_mean_std"],
+            label=groupname,
+            alpha=0.8,
+        )
     ax.vlines(
         points["size"],
         points["qlow"],
         points["qhigh"],
         zorder=-1,
         label="Posterior predictive distribution",
+        color="gray",
     )
     ax.legend(frameon=False)
     ax.set(
         xlabel="Number of measurements",
-        ylabel="Igcx (ln scale, standardised)",
+        ylabel="Igcx relative to PA (ln scale, standardised)",
     )
     return f, ax
 
@@ -113,8 +63,18 @@ def main():
     # look at model results...
     idata = az.from_netcdf(IDATA_FILE)
     # Posterior predictive check
-    f, ax = resid_scatter(msts, idata)
-    f.savefig(PLOT_DIR / "resid_scatter.png", bbox_inches="tight", dpi=300)
+    for colorcol in [
+        "mouse",
+        "lectin",
+        "vessel_type",
+        "contour_in_vessel_type",
+    ]:
+        f, ax = resid_scatter(msts, idata, colorcol=colorcol)
+        f.savefig(
+            PLOT_DIR / f"resid_scatter_{colorcol}.png",
+            bbox_inches="tight",
+            dpi=300,
+        )
     # vessel type figure
     lectins = ["wga", "lea"]
     vt_comps = [
@@ -155,23 +115,21 @@ def main():
         )
     f, ax = plt.subplots(figsize=[15, 8])
     ax = forestplot(ax, ts)
-    f.savefig(PLOT_DIR / f"vessel_effects.png", bbox_inches="tight", dpi=300)
+    f.savefig(PLOT_DIR / "vessel_effects.png", bbox_inches="tight", dpi=300)
     # lectin figure
     ts = {}
     for vt in idata.posterior.coords["vessel_type"].values:
         name = f"Lectin effect difference: wga - lea, vessel type {vt}"
-        wga = idata.posterior["a_lectin"].sel(lectin="wga") + idata.posterior[
-            "a_lectin_vessel_type"
-        ].sel(lectin_vessel_type=f"wga:{vt}")
-        lea = idata.posterior["a_lectin"].sel(lectin="lea") + idata.posterior[
-            "a_lectin_vessel_type"
-        ].sel(lectin_vessel_type=f"lea:{vt}")
+        wga = idata.posterior["a_lectin_vessel_type"].sel(
+            lectin_vessel_type=f"wga:{vt}"
+        )
+        lea = idata.posterior["a_lectin_vessel_type"].sel(
+            lectin_vessel_type=f"lea:{vt}"
+        )
         ts[name] = wga - lea
     for name, vtypelist in [("arterioles", arterioles), ("venules", venules)]:
         ts[f"Average lectin effect difference: wga - lea, {name}"] = (
-            idata.posterior["a_lectin"].sel(lectin="wga")
-            - idata.posterior["a_lectin"].sel(lectin="lea")
-            + idata.posterior["a_lectin_vessel_type"]
+            idata.posterior["a_lectin_vessel_type"]
             .sel(lectin_vessel_type=[f"wga:{vt}" for vt in vtypelist])
             .mean(dim=["lectin_vessel_type"])
             - idata.posterior["a_lectin_vessel_type"]
@@ -180,7 +138,6 @@ def main():
         )
     f, ax = plt.subplots(figsize=[15, 8])
     ax = forestplot(ax, ts)
-    ax.set_xlim(-2.8, -1.8)
     f.savefig(PLOT_DIR / "lectin_effects.png", bbox_inches="tight", dpi=300)
 
 
