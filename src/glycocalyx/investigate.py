@@ -71,7 +71,7 @@ def main():
     ]:
         f, ax = resid_scatter(msts, idata, colorcol=colorcol)
         f.savefig(
-            PLOT_DIR / f"resid_scatter_{colorcol}.png",
+            PLOT_DIR / f"resid_scatter_{colorcol}.svg",
             bbox_inches="tight",
             dpi=300,
         )
@@ -115,7 +115,7 @@ def main():
         )
     f, ax = plt.subplots(figsize=[15, 8])
     ax = forestplot(ax, ts)
-    f.savefig(PLOT_DIR / "vessel_effects.png", bbox_inches="tight", dpi=300)
+    f.savefig(PLOT_DIR / "vessel_effects.svg", bbox_inches="tight", dpi=300)
     # lectin figure
     ts = {}
     for vt in idata.posterior.coords["vessel_type"].values:
@@ -138,7 +138,7 @@ def main():
         )
     f, ax = plt.subplots(figsize=[15, 8])
     ax = forestplot(ax, ts)
-    f.savefig(PLOT_DIR / "lectin_effects.png", bbox_inches="tight", dpi=300)
+    f.savefig(PLOT_DIR / "lectin_effects.svg", bbox_inches="tight", dpi=300)
 
 
 if __name__ == "__main__":
