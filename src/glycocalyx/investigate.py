@@ -15,9 +15,18 @@ def forestplot(ax, ts, xlabel="Distribution of posterior samples"):
     az.plot_forest(ts, ax=ax, combined=True, textsize=12, linewidth=3)
     ax.axvline(0.0, linestyle="--", color="black")
     xlow, xhigh = ax.get_xlim()
+    ylow, yhigh = ax.get_ylim()
+    n = len(ts.values())
     xbiggest = max(abs(xlow), abs(xhigh))
     ax.set_xlim(-xbiggest, xbiggest)
     ax.set(title="", xlabel=xlabel)
+    yoffset = ((yhigh - ylow) / n) * 0.1
+    for (_, t), ticky in zip(sorted(ts.items()), ax.get_yticks()[::-1]):
+        x = t.mean()
+        y = ticky + yoffset
+        prob = (t > 0).mean().item()
+        txt = f"Pr(+ve): {round(prob, 2)}"
+        ax.text(x, y, txt, ha="center", va="bottom", fontsize=10)
     return ax
 
 
