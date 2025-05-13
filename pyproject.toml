@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "cmdstanpy>=1.2.5",
+    "bambi[bayeux]>=0.15.0",
     "matplotlib>=3.10.0",
     "polars[pyarrow]>=1.22.0",
 ]
