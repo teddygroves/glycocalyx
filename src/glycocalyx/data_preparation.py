@@ -1,22 +1,16 @@
 from pathlib import Path
+from re import I
+
 import numpy as np
 import polars as pl
+
+from glycocalyx.util import get_ln_mean, standardise
 
 ROOT = Path(__file__).parent.parent.parent
 RAW_DATA_FILE = ROOT / "data" / "raw" / "GlycocalyxPaper_DifferentLectins.csv"
 OUTPUT_FILE = ROOT / "data" / "prepared" / "pixels.csv"
 OUTPUT_FILE_GROUPED = ROOT / "data" / "prepared" / "contours.csv"
 GROUP_COLS = ["lectin", "mouse", "vessel_type", "contour_in_vessel_type"]
-
-
-def standardise(expr: pl.Expr):
-    return (expr - expr.mean()) / expr.std()
-
-
-def get_ln_mean(df: pl.DataFrame) -> pl.Series:
-    group = df.group_by("mouse", "vessel_type")
-    mean = group.agg(pl.col("ln_y").mean().alias("mean"))
-    return df.join(mean.filter(vessel_type="pa"), on="mouse")["mean"]
 
 
 def main():
