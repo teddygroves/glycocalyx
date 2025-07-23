@@ -121,11 +121,7 @@ def main():
         f, ax = plt.subplots(figsize=(10, 6))
         ax = forestplot(ax, te_for_vt, xlabel="")
         ax.legend(frameon=False)
-        f.savefig(
-            PLOT_DIR / f"{ycol}_treatment_by_vt.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
+        f.savefig(PLOT_DIR / f"{ycol}_treatment_by_vt.svg", bbox_inches="tight")
 
 
 if __name__ == "__main__":
