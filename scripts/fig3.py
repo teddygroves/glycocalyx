@@ -169,8 +169,7 @@ def analyse():
     ts = {}
     for lt in lectins:
         for vta, vtb in vt_comps:
-            name = f"Effect difference: {vta} - {vtb}, lectin {lt}"
-            ts[name] = (
+            t = (
                 idata.posterior["a_vessel_type"].sel(vessel_type=vta)
                 + idata.posterior["a_lectin_vessel_type"].sel(
                     lectin_vessel_type=f"{lt}:{vta}"
@@ -180,6 +179,12 @@ def analyse():
                     lectin_vessel_type=f"{lt}:{vtb}"
                 )
             )
+            sp = (t > 0).mean().item()
+            name = (
+                f"Effect difference: {vta} - {vtb}, lectin {lt}"
+                f" (SP={round(sp, 2)})"
+            )
+            ts[name] = t
         arteriole_effect, venule_effect = (
             (
                 idata.posterior["a_vessel_type"].sel(vessel_type=vtypelist)
@@ -189,9 +194,13 @@ def analyse():
             ).mean(dim=["vessel_type", "lectin_vessel_type"])
             for vtypelist in [arterioles, venules]
         )
-        ts[f"Average effect difference: arterioles - venules, lectin {lt}"] = (
-            arteriole_effect - venule_effect
+        t = arteriole_effect - venule_effect
+        sp = (t > 0).mean().item()
+        name = (
+            f"Average effect difference: arterioles - venules, lectin {lt}"
+            f" (SP={round(sp, 2)})"
         )
+        ts[name] = t
     f, ax = plt.subplots(figsize=[15, 8])
     ax = forestplot(ax, ts)
     f.savefig(PLOT_DIR / "vessel_effects.svg", bbox_inches="tight", dpi=300)
