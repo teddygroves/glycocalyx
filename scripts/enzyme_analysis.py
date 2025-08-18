@@ -61,8 +61,11 @@ def main():
     ts = {}
     for ycol in YCOLS:
         print(f"\n******\tAnalysing column {ycol}...\t*******")
+        log_ycol_mean = np.log(data[ycol]).mean()
         priors = {
-            "mu": {"treatment": bmb.Prior("Normal", mu=0.0, sigma=1.5)},
+            "mu": {
+                "treatment": bmb.Prior("Normal", mu=log_ycol_mean, sigma=0.5)
+            },
             "sigma": {
                 # HalfNormal is intentional, this effect must be positive!
                 f"scale(log({ycol}_std))": bmb.Prior("HalfNormal", sigma=2)
@@ -76,7 +79,9 @@ def main():
         idata = model.fit(target_accept=0.999, seed=SEED)
         model.predict(idata, data=data, kind="response", inplace=True)
         idata.observed_data[f"{ycol}_std"] = data[f"{ycol}_std"]
-        effect = -idata.posterior["treatment"]
+        effect = idata.posterior["treatment"].sel(
+            treatment_dim="Enzyme"
+        ) - idata.posterior["treatment"].sel(treatment_dim="Saline")
         qlow, qhigh = effect.quantile([0.05, 0.95]).to_numpy()
         sp = (effect > 0).mean().item()
         name = f"{ycol} (SP = {round(sp, 2)})"
@@ -90,7 +95,13 @@ def main():
         print(f"95% {ycol} effect quantile: {round(qhigh, 2)}")
 
     f, ax = plt.subplots(figsize=(10, 6))
-    ax = forestplot(ax, ts, xlabel="effect", qlow=0.05, qhigh=0.95)
+    ax = forestplot(
+        ax,
+        ts,
+        xlabel="Effect difference (Enzyme - Saline)",
+        qlow=0.05,
+        qhigh=0.95,
+    )
     ax.legend(frameon=False)
     f.savefig(PLOT_DIR / "enzyme" / "enzyme_effects.svg", bbox_inches="tight")
 
