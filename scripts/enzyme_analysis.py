@@ -78,7 +78,9 @@ def main():
         idata.observed_data[f"{ycol}_std"] = data[f"{ycol}_std"]
         effect = -idata.posterior["treatment"]
         qlow, qhigh = effect.quantile([0.05, 0.95]).to_numpy()
-        ts[ycol] = effect
+        sp = (effect > 0).mean().item()
+        name = f"{ycol} (SP = {round(sp, 2)})"
+        ts[name] = effect
         idata.to_netcdf(OUT_DIR / f"{ycol}.nc")
         f, ax = plt.subplots(figsize=(10, 6))
         ax = plot_ppc(ax, idata, data, ycol, model)
