@@ -1,5 +1,37 @@
 import numpy as np
-from matplotlib import pyplot as pl
+from matplotlib import pyplot as plt
+
+
+def resid_scatter(msts, idata, qlow=0.01, qhigh=0.99, colorcol="lectin"):
+    dim = ["chain", "draw"]
+    points = msts.with_columns(
+        qlow=idata.posterior_predictive["yrep"].quantile(qlow, dim=dim).values,
+        qhigh=idata.posterior_predictive["yrep"]
+        .quantile(qhigh, dim=dim)
+        .values,
+    )
+    f, ax = plt.subplots()
+    for (groupname,), subdf in points.group_by(colorcol):
+        ax.scatter(
+            subdf["size"],
+            subdf["ln_y_norm_mean_std"],
+            label=groupname,
+            alpha=0.8,
+        )
+    ax.vlines(
+        points["size"],
+        points["qlow"],
+        points["qhigh"],
+        zorder=-1,
+        label="Posterior predictive distribution",
+        color="gray",
+    )
+    ax.legend(frameon=False)
+    ax.set(
+        xlabel="Number of measurements",
+        ylabel="Igcx relative to PA (ln scale, standardised)",
+    )
+    return f, ax
 
 
 def forestplot(ax, ts, xlabel="Test statistic", qlow=0.025, qhigh=0.975):
