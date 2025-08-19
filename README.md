@@ -5,6 +5,7 @@ This repository contains code analysing measurements of glycocalyx density in mi
 To run the analysis, first install [cmdstanpy](https://mc-stan.org/cmdstanpy/index.html) and [uv](https://docs.astral.sh/uv/). Then run the following commands from the project root:
 
 ```sh
+> uv run scripts/fig5e.py
 > uv run scripts/fig3.py
 > uv run scripts/fig6.py
 > uv run scripts/igcx_analysis.py
