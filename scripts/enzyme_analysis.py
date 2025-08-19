@@ -95,13 +95,7 @@ def main():
         print(f"95% {ycol} effect quantile: {round(qhigh, 2)}")
 
     f, ax = plt.subplots(figsize=(10, 6))
-    ax = forestplot(
-        ax,
-        ts,
-        xlabel="Effect difference (Enzyme - Saline)",
-        qlow=0.05,
-        qhigh=0.95,
-    )
+    ax = forestplot(ax, ts, xlabel="Effect difference (Enzyme - Saline)")
     ax.legend(frameon=False)
     f.savefig(PLOT_DIR / "enzyme" / "enzyme_effects.svg", bbox_inches="tight")
 

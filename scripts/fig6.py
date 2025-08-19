@@ -79,13 +79,7 @@ def main():
         p = (t > 0).mean().to_numpy().item()
         ts[ycol + f" (SP={round(p, 2)})"] = t
     f, ax = plt.subplots(figsize=(10, 6))
-    ax = forestplot(
-        ax,
-        ts,
-        xlabel="Normalised enzyme effect vs saline",
-        qlow=0.05,
-        qhigh=0.95,
-    )
+    ax = forestplot(ax, ts, xlabel="Normalised enzyme effect vs saline")
     ax.legend(frameon=False)
     f.savefig(PLOT_DIR / "effects.svg", bbox_inches="tight")
 

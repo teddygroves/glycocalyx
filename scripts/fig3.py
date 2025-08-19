@@ -235,7 +235,7 @@ def analyse():
         )
         ts[name] = t
     f, ax = plt.subplots(figsize=[15, 8])
-    ax = forestplot(ax, ts, qlow=0.05, qhigh=0.95)
+    ax = forestplot(ax, ts)
     f.savefig(PLOT_DIR / "lectin_effects.svg", bbox_inches="tight", dpi=300)
 
 
