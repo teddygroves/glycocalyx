@@ -83,7 +83,8 @@ def main():
             treatment_dim="Enzyme"
         ) - idata.posterior["treatment"].sel(treatment_dim="Saline")
         qlow, qhigh = effect.quantile([0.05, 0.95]).to_numpy()
-        sp = (effect > 0).mean().item()
+        k = (effect > 0).mean().item()
+        sp = max(k, 1 - k)
         name = f"{ycol} (SP = {round(sp, 2)})"
         ts[name] = effect
         idata.to_netcdf(OUT_DIR / f"{ycol}.nc")

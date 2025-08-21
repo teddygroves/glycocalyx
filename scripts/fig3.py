@@ -179,7 +179,8 @@ def analyse():
                     lectin_vessel_type=f"{lt}:{vtb}"
                 )
             )
-            sp = (t > 0).mean().item()
+            k = (t > 0).mean().item()
+            sp = max(k, 1 - k)
             name = (
                 f"Effect difference: {vta} - {vtb}, lectin {lt}"
                 f" (SP={round(sp, 2)})"
@@ -195,7 +196,8 @@ def analyse():
             for vtypelist in [arterioles, venules]
         )
         t = arteriole_effect - venule_effect
-        sp = (t > 0).mean().item()
+        k = (t > 0).mean().item()
+        sp = max(k, 1 - k)
         name = (
             f"Average effect difference: arterioles - venules, lectin {lt}"
             f" (SP={round(sp, 2)})"
@@ -214,7 +216,8 @@ def analyse():
             lectin_vessel_type=f"lea:{vt}"
         )
         t = wga - lea
-        sp = (t > 0).mean().item()
+        k = (t > 0).mean().item()
+        sp = max(k, 1 - k)
         name = (
             "Average lectin effect difference: wga - lea, "
             f"vessel type {vt} (SP={round(sp, 2)})"
@@ -228,7 +231,8 @@ def analyse():
         ].sel(lectin_vessel_type=[f"lea:{vt}" for vt in vtypelist]).mean(
             dim=["lectin_vessel_type"]
         )
-        sp = (t > 0).mean().item()
+        k = (t > 0).mean().item()
+        sp = max(k, 1 - k)
         name = (
             "Average lectin effect difference: wga - lea, "
             f"{name} (SP={round(sp, 2)})"

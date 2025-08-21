@@ -2,12 +2,10 @@ from pathlib import Path
 
 import arviz as az
 import bambi as bmb
-import numpy as np
 import polars as pl
-import xarray as xr
 from matplotlib import pyplot as plt
 
-from glycocalyx.plotting import forestplot, resid_scatter
+from glycocalyx.plotting import forestplot
 
 ROOT = Path(__file__).parent.parent
 RAW_DATA_FILE = ROOT / "data" / "raw" / "plasma_hyaluronan.csv"
@@ -36,8 +34,9 @@ def main():
     idata: az.InferenceData = model.fit(target_accept=0.99, seed=SEED)
     model.predict(idata, data=data, kind="response", inplace=True)
     t = -idata.posterior["treatment"]
-    p = (t > 0).mean().to_numpy().item()
-    ts[f"Enzyme effect (SP={round(p, 2)})"] = t
+    k = (t > 0).mean().to_numpy().item()
+    sp = max(k, 1 - k)
+    ts[f"Enzyme effect (SP={round(sp, 2)})"] = t
     print(az.summary(idata))
     idata.to_netcdf(str(IDATA_DIR / "idata.nc"))
     f, ax = plt.subplots(figsize=(10, 6))

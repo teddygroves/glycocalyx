@@ -63,11 +63,7 @@ def main():
     for ycol in YCOLS:
         print(f"Fitting dependent variable {ycol}...")
         formula = bmb.Formula(MODEL_FORMULA.format(y=ycol))
-        model = bmb.Model(
-            formula,
-            data=prepared_data.to_pandas(),
-            # priors=priors,
-        )
+        model = bmb.Model(formula, data=prepared_data.to_pandas())
         idata: az.InferenceData = model.fit(target_accept=0.999, seed=SEED)
         print(az.summary(idata))
         idata.to_netcdf(str(IDATA_DIR / f"{ycol}.nc"))
@@ -76,8 +72,9 @@ def main():
             posterior["treatment"].sel(treatment_dim="E")
             - posterior["treatment"].sel(treatment_dim="S")
         ) / prepared_data[ycol].mean()
-        p = (t > 0).mean().to_numpy().item()
-        ts[ycol + f" (SP={round(p, 2)})"] = t
+        k = (t > 0).mean().to_numpy().item()
+        sp = max(k, 1 - k)
+        ts[ycol + f" (SP={round(sp, 2)})"] = t
     f, ax = plt.subplots(figsize=(10, 6))
     ax = forestplot(ax, ts, xlabel="Normalised enzyme effect vs saline")
     ax.legend(frameon=False)

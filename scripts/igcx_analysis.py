@@ -4,7 +4,6 @@ import arviz as az
 import bambi as bmb
 import numpy as np
 import polars as pl
-from pymc.distributions.distribution import partial_observed_rv_logprob
 import xarray as xr
 from matplotlib import pyplot as plt
 
@@ -102,8 +101,9 @@ def main():
         idata.to_netcdf(str(IDATA_DIR / f"{ycol}.nc"))
         posterior: xr.Dataset = idata.posterior
         te_overall: xr.DataArray = get_overall_treatment_effect(posterior)
-        p = (te_overall > 0).mean().to_numpy().item()
-        print("Pr(Saline effect > Enzyme effect): " + str(round(p, 3)))
+        k = (te_overall > 0).mean().to_numpy().item()
+        sp = max(k, 1 - k)
+        print("Pr(Saline effect > Enzyme effect): " + str(round(sp, 3)))
         te_for_vt = {"cap": posterior["treatment"]}
         for vt in posterior.coords["vessel_type_dim"].values:
             te_for_vt[vt] = (
@@ -116,7 +116,7 @@ def main():
             f"Saline effect on {ycol} for vessel type {k} (pr +ve = {(v > 0).mean().round(2).item()})": v
             for k, v in te_for_vt.items()
         }
-        te_for_vt[f"Overall Saline effect (pr +ve = {round(p, 2)})"] = (
+        te_for_vt[f"Overall Saline effect (pr +ve = {round(sp, 2)})"] = (
             te_overall
         )
         f, ax = plt.subplots(figsize=(10, 6))
