@@ -4,6 +4,7 @@ import arviz as az
 import bambi as bmb
 import polars as pl
 from matplotlib import pyplot as plt
+import numpy as np
 
 from glycocalyx.plotting import forestplot
 
@@ -15,6 +16,47 @@ PLOT_DIR = ROOT / "plots" / "fig5e"
 FORMULA_MU = "log(concentration) ~ treatment + (1|mouse)"
 FORMULA_SIGMA = "sigma ~ treatment"
 SEED = 1234
+
+
+def plot_ppc(ax, idata, data, model):
+    treatment_to_x = {"Saline": 0.4, "Enzymes": 0.6}
+    plot_df = data.with_columns(
+        x_mean=pl.col("treatment").map_elements(
+            treatment_to_x.get, return_dtype=pl.Float32
+        ),
+        jitter=np.random.normal(loc=0, scale=0.01, size=len(data)),
+    ).with_columns(x=pl.col("x_mean") + pl.col("jitter"))
+    for (mouse,), subdf in plot_df.with_row_index().group_by("mouse"):
+        x = subdf["x"]
+        y = subdf["concentration"]
+        ix = subdf["index"]
+        sct = ax.scatter(x, y)
+        qlow, qhigh = np.exp(
+            idata.posterior_predictive["log(concentration)"]
+            .quantile([0.05, 0.95], dim=["chain", "draw"])
+            .to_numpy()[:, ix]
+        )
+        lines = ax.vlines(
+            x,
+            qlow,
+            qhigh,
+            zorder=-1,
+            color="tab:blue",
+            alpha=0.6,
+        )
+    ax.semilogy()
+    ax.set(xlabel="Treatment", ylabel="Concentration")
+    ax.set_xticks(list(treatment_to_x.values()), list(treatment_to_x.keys()))
+    ax.set_xlim(0.3, 0.7)
+    ax.legend(
+        [sct, lines],
+        [
+            "Observation (color indicates mouse)",
+            "5%-95% posterior predictive interval",
+        ],
+        frameon=False,
+    )
+    return ax
 
 
 def main():
@@ -31,18 +73,25 @@ def main():
         )
     }
     model = bmb.Model(formula, data=data.to_pandas(), priors=priors)
-    idata: az.InferenceData = model.fit(target_accept=0.99, seed=SEED)
-    model.predict(idata, data=data, kind="response", inplace=True)
+    idata_file = IDATA_DIR / "idata.nc"
+    if not idata_file.exists():
+        idata: az.InferenceData = model.fit(target_accept=0.99, seed=SEED)
+        model.predict(idata, data=data, kind="response", inplace=True)
+        print(az.summary(idata))
+        idata.to_netcdf(str(IDATA_DIR / "idata.nc"))
+    else:
+        idata = az.from_netcdf(idata_file)
     t = -idata.posterior["treatment"]
     k = (t > 0).mean().to_numpy().item()
     sp = max(k, 1 - k)
     ts[f"Enzyme effect (SP={round(sp, 2)})"] = t
-    print(az.summary(idata))
-    idata.to_netcdf(str(IDATA_DIR / "idata.nc"))
     f, ax = plt.subplots(figsize=(10, 6))
     ax = forestplot(ax, ts, xlabel="Enzyme effect")
     ax.legend(frameon=False)
     f.savefig(PLOT_DIR / "effects.svg", bbox_inches="tight")
+    f, ax = plt.subplots(figsize=(10, 6))
+    ax = plot_ppc(ax, idata, data, model)
+    f.savefig(PLOT_DIR / "ppc.svg", bbox_inches="tight")
 
 
 if __name__ == "__main__":

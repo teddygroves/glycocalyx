@@ -92,13 +92,21 @@ def main():
     print(prepared_data)
     for ycol, formula in YCOL_TO_FORMULA.items():
         print(f"Fitting dependent variable {ycol}...")
+        idata_file = IDATA_DIR / f"{ycol}.nc"
         formula = bmb.Formula(formula.format(y=ycol + "_stnd"))
         model = bmb.Model(
             formula, data=prepared_data.to_pandas(), priors=PRIORS
         )
-        idata: az.InferenceData = model.fit(target_accept=0.99, seed=SEED)
-        print(az.summary(idata))
-        idata.to_netcdf(str(IDATA_DIR / f"{ycol}.nc"))
+        if not idata_file.exists():
+            idata: az.InferenceData = model.fit(target_accept=0.99, seed=SEED)
+            model.predict(
+                idata,
+                data=prepared_data.to_pandas(),
+                kind="response",
+                inplace=True,
+            )
+            print(az.summary(idata))
+            idata.to_netcdf(str(idata_file))
         posterior: xr.Dataset = idata.posterior
         te_overall: xr.DataArray = get_overall_treatment_effect(posterior)
         k = (te_overall > 0).mean().to_numpy().item()

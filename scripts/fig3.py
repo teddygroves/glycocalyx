@@ -244,6 +244,8 @@ def analyse():
 
 
 if __name__ == "__main__":
-    prepare_data()
-    fit()
+    if not (CONTOUR_FILE.exists() and PIXEL_FILE.exists()):
+        prepare_data()
+    if not IDATA_FILE.exists():
+        fit()
     analyse()

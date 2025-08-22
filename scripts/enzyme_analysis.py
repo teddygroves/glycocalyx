@@ -61,6 +61,7 @@ def main():
     ts = {}
     for ycol in YCOLS:
         print(f"\n******\tAnalysing column {ycol}...\t*******")
+        idata_file = OUT_DIR / f"{ycol}.nc"
         log_ycol_mean = np.log(data[ycol]).mean()
         priors = {
             "mu": {
@@ -76,9 +77,13 @@ def main():
             FORMULA_SIGMA.format(ycol=ycol),
         )
         model = bmb.Model(formula, data.to_pandas(), priors=priors)
-        idata = model.fit(target_accept=0.999, seed=SEED)
-        model.predict(idata, data=data, kind="response", inplace=True)
-        idata.observed_data[f"{ycol}_std"] = data[f"{ycol}_std"]
+        if not idata_file.exists():
+            idata = model.fit(target_accept=0.999, seed=SEED)
+            model.predict(idata, data=data, kind="response", inplace=True)
+            idata.observed_data[f"{ycol}_std"] = data[f"{ycol}_std"]
+            idata.to_netcdf(idata_file)
+        else:
+            idata = az.from_netcdf(idata_file)
         effect = idata.posterior["treatment"].sel(
             treatment_dim="Enzyme"
         ) - idata.posterior["treatment"].sel(treatment_dim="Saline")
@@ -87,7 +92,6 @@ def main():
         sp = max(k, 1 - k)
         name = f"{ycol} (SP = {round(sp, 2)})"
         ts[name] = effect
-        idata.to_netcdf(OUT_DIR / f"{ycol}.nc")
         f, ax = plt.subplots(figsize=(10, 6))
         ax = plot_ppc(ax, idata, data, ycol, model)
         f.savefig(PLOT_DIR / "enzyme" / f"ppc_{ycol}.svg", bbox_inches="tight")
