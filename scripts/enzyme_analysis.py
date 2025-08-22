@@ -23,6 +23,47 @@ YCOLS = ["w", "dx", "s", "lambda", "Ig", "Ie", "Ip", "I0"]
 SEED = 1234
 
 
+def plot_ppc_treatment(ax, idata, data, model, ycol):
+    treatment_to_x = {"Saline": 0.4, "Enzyme": 0.6}
+    plot_df = data.with_columns(
+        x_mean=pl.col("treatment").map_elements(
+            treatment_to_x.get, return_dtype=pl.Float32
+        ),
+        jitter=np.random.normal(loc=0, scale=0.025, size=len(data)),
+    ).with_columns(x=pl.col("x_mean") + pl.col("jitter"))
+    for (mouse,), subdf in plot_df.with_row_index().group_by("mouse"):
+        x = subdf["x"]
+        y = subdf[ycol]
+        ix = subdf["index"]
+        sct = ax.scatter(x, y)
+        qlow, qhigh = np.exp(
+            idata.posterior_predictive[f"log({ycol})"]
+            .quantile([0.05, 0.95], dim=["chain", "draw"])
+            .to_numpy()[:, ix]
+        )
+        lines = ax.vlines(
+            x,
+            qlow,
+            qhigh,
+            zorder=-1,
+            color="tab:blue",
+            alpha=0.6,
+        )
+    ax.set(xlabel="Treatment", ylabel=ycol)
+    ax.set_xticks(list(treatment_to_x.values()), list(treatment_to_x.keys()))
+    ax.set_xlim(0.3, 0.7)
+    ax.legend(
+        [sct, lines],
+        [
+            "Observation (color indicates mouse)",
+            "5%-95% posterior predictive interval",
+        ],
+        frameon=False,
+    )
+    ax.semilogy()
+    return ax
+
+
 def plot_ppc(ax, idata, data, ycol, model):
     for (mouse,), subdf in data.with_row_index().group_by("mouse"):
         xcol = f"{ycol}_std"
@@ -95,6 +136,12 @@ def main():
         f, ax = plt.subplots(figsize=(10, 6))
         ax = plot_ppc(ax, idata, data, ycol, model)
         f.savefig(PLOT_DIR / "enzyme" / f"ppc_{ycol}.svg", bbox_inches="tight")
+        f, ax = plt.subplots(figsize=(10, 6))
+        ax = plot_ppc_treatment(ax, idata, data, model, ycol)
+        f.savefig(
+            PLOT_DIR / "enzyme" / f"ppc_{ycol}_treatment.svg",
+            bbox_inches="tight",
+        )
         print(az.summary(idata))
         print(f"5% {ycol} effect quantile: {round(qlow, 2)}")
         print(f"95% {ycol} effect quantile: {round(qhigh, 2)}")
