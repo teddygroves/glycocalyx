@@ -47,12 +47,12 @@ SEED = 1234
 
 
 def plot_ppc(ax, idata, data, model, ycol):
-    treatment_to_x = {"S": 0.4, "E": 0.6, "N": 0.8}
+    treatment_to_x = {"S": 0.4, "E": 0.6}
     plot_df = data.with_columns(
         x_mean=pl.col("treatment").map_elements(
             treatment_to_x.get, return_dtype=pl.Float32
         ),
-        jitter=np.random.normal(loc=0, scale=0.01, size=len(data)),
+        jitter=np.random.normal(loc=0, scale=0.025, size=len(data)),
     ).with_columns(x=pl.col("x_mean") + pl.col("jitter"))
     for (mouse,), subdf in plot_df.with_row_index().group_by("mouse"):
         x = subdf["x"]
@@ -74,7 +74,7 @@ def plot_ppc(ax, idata, data, model, ycol):
         )
     ax.set(xlabel="Treatment", ylabel=ycol)
     ax.set_xticks(list(treatment_to_x.values()), list(treatment_to_x.keys()))
-    ax.set_xlim(0.3, 0.9)
+    ax.set_xlim(0.3, 0.7)
     ax.legend(
         [sct, lines],
         [
