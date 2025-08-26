@@ -38,7 +38,7 @@ def plot_ppc_treatment(ax, idata, data, model, ycol):
         sct = ax.scatter(x, y)
         qlow, qhigh = np.exp(
             idata.posterior_predictive[f"log({ycol})"]
-            .quantile([0.05, 0.95], dim=["chain", "draw"])
+            .quantile([0.025, 0.975], dim=["chain", "draw"])
             .to_numpy()[:, ix]
         )
         lines = ax.vlines(
@@ -46,8 +46,7 @@ def plot_ppc_treatment(ax, idata, data, model, ycol):
             qlow,
             qhigh,
             zorder=-1,
-            color="tab:blue",
-            alpha=0.6,
+            color="gainsboro",
         )
     ax.set(xlabel="Treatment", ylabel=ycol)
     ax.set_xticks(list(treatment_to_x.values()), list(treatment_to_x.keys()))
@@ -81,8 +80,7 @@ def plot_ppc(ax, idata, data, ycol, model):
             qlow,
             qhigh,
             zorder=-1,
-            color="tab:blue",
-            alpha=0.6,
+            color="gainsboro",
         )
     ax.semilogy()
     ax.set(xlabel=xcol, ylabel=ycol)

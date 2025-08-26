@@ -6,7 +6,7 @@ import numpy as np
 import polars as pl
 from matplotlib import pyplot as plt
 
-from glycocalyx.plotting import forestplot, resid_scatter
+from glycocalyx.plotting import forestplot
 from glycocalyx.util import get_ln_mean, standardise
 
 ROOT = Path(__file__).parent.parent
@@ -52,6 +52,43 @@ LectinVesselType = pl.Enum(
         "wga:av",
     ]
 )
+
+
+def resid_scatter(msts, idata, qlow=0.25, qhigh=0.975, colorcol="lectin"):
+    dim = ["chain", "draw"]
+    points = msts.with_row_index(name="idata_index").sort(colorcol)
+    points = points.with_row_index(name="index").with_columns(
+        qlow=idata.posterior_predictive["yrep"]
+        .quantile(qlow, dim=dim)
+        .values[points["idata_index"]],
+        qhigh=idata.posterior_predictive["yrep"]
+        .quantile(qhigh, dim=dim)
+        .values[points["idata_index"]],
+        x=pl.col("index") / len(points),
+    )
+    f, ax = plt.subplots()
+    for (groupname,), subdf in points.group_by(colorcol):
+        ax.scatter(
+            subdf["x"],
+            subdf["ln_y_norm_mean_std"],
+            label=f"{colorcol.replace('_', ' ').capitalize()}: {groupname}",
+            alpha=0.8,
+        )
+    ax.vlines(
+        points["x"],
+        points["qlow"],
+        points["qhigh"],
+        zorder=-1,
+        label="2.5%-97.5% posterior predictive interval",
+        color="gainsboro",
+    )
+    ax.set(
+        xlabel="Arbitrary order",
+        ylabel="Igcx relative to PA (ln scale, standardised)",
+        xticks=[],
+    )
+    ax.legend(frameon=False, loc=(1.0, 0.5))
+    return f, ax
 
 
 def prepare_data():
@@ -152,7 +189,6 @@ def analyse():
         f.savefig(
             PLOT_DIR / f"resid_scatter_{colorcol}.svg",
             bbox_inches="tight",
-            dpi=300,
         )
     # vessel type figure
     lectins = ["wga", "lea"]

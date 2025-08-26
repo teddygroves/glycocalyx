@@ -46,44 +46,51 @@ PRIORS = {
 SEED = 1234
 
 
-def plot_ppc(ax, idata, data, model, ycol):
+def plot_ppc(fig, axes, idata, data, model, ycol):
     treatment_to_x = {"S": 0.4, "E": 0.6}
-    plot_df = data.with_columns(
-        x_mean=pl.col("treatment").map_elements(
-            treatment_to_x.get, return_dtype=pl.Float32
-        ),
-        jitter=np.random.normal(loc=0, scale=0.025, size=len(data)),
-    ).with_columns(x=pl.col("x_mean") + pl.col("jitter"))
-    for (mouse,), subdf in plot_df.with_row_index().group_by("mouse"):
-        x = subdf["x"]
-        y = subdf[ycol]
-        ix = subdf["index"]
-        sct = ax.scatter(x, y)
-        qlow, qhigh = (
-            idata.posterior_predictive[ycol]
-            .quantile([0.05, 0.95], dim=["chain", "draw"])
-            .to_numpy()[:, ix]
-        )
-        lines = ax.vlines(
-            x,
-            qlow,
-            qhigh,
-            zorder=-1,
-            color="tab:blue",
-            alpha=0.6,
-        )
-    ax.set(xlabel="Treatment", ylabel=ycol)
-    ax.set_xticks(list(treatment_to_x.values()), list(treatment_to_x.keys()))
-    ax.set_xlim(0.3, 0.7)
-    ax.legend(
+    plot_df_enzyme, plot_df_saline = (
+        data.with_row_index(name="idata_index")
+        .filter(treatment=t)
+        .sort("mouse")
+        .with_row_index()
+        # .with_columns(
+        #     x_mean=pl.col("mouse").map_elements(
+        #         treatment_to_x.get, return_dtype=pl.Float32
+        #     ),
+        #     jitter=np.random.normal(loc=0, scale=0.025, size=len(data)),
+        # )
+        .with_columns(x=pl.col("index") / pl.col("index").len())
+        for t in ("E", "S")
+    )
+    for ax, plot_df in zip(axes, (plot_df_enzyme, plot_df_saline)):
+        for (mouse,), subdf in plot_df.group_by("mouse"):
+            x = subdf["x"]
+            y = subdf[ycol]
+            sct = ax.scatter(x, y, s=8)
+            qlow, qhigh = (
+                idata.posterior_predictive[ycol]
+                .quantile([0.025, 0.975], dim=["chain", "draw"])
+                .to_numpy()[:, subdf["idata_index"]]
+            )
+            lines = ax.vlines(
+                x,
+                qlow,
+                qhigh,
+                zorder=-1,
+                color="gainsboro",
+            )
+        ax.set(xlabel="Arbitrary order", ylabel=ycol)
+        ax.set_xticks([])
+        # ax.set_xlim(0.3, 0.7)
+    fig.legend(
         [sct, lines],
         [
             "Observation (color indicates mouse)",
-            "5%-95% posterior predictive interval",
+            "2.5%-97.5% posterior predictive interval",
         ],
         frameon=False,
     )
-    return ax
+    return fig, axes
 
 
 def prepare_data(raw_data: pl.DataFrame) -> pl.DataFrame:
@@ -173,8 +180,8 @@ def main():
         ax = forestplot(ax, te_for_vt, xlabel="")
         ax.legend(frameon=False)
         f.savefig(PLOT_DIR / f"{ycol}_treatment_by_vt.svg", bbox_inches="tight")
-        f, ax = plt.subplots(figsize=(10, 6))
-        ax = plot_ppc(ax, idata, prepared_data, model, ycol + "_stnd")
+        f, axes = plt.subplots(2, 1, figsize=(10, 6))
+        f, axes = plot_ppc(f, axes, idata, prepared_data, model, ycol + "_stnd")
         f.savefig(PLOT_DIR / f"ppc_{ycol}.svg", bbox_inches="tight")
 
 

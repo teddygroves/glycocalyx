@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def resid_scatter(msts, idata, qlow=0.01, qhigh=0.99, colorcol="lectin"):
+def resid_scatter(msts, idata, qlow=0.25, qhigh=0.75, colorcol="lectin"):
     dim = ["chain", "draw"]
     points = msts.with_columns(
         qlow=idata.posterior_predictive["yrep"].quantile(qlow, dim=dim).values,
@@ -24,7 +24,7 @@ def resid_scatter(msts, idata, qlow=0.01, qhigh=0.99, colorcol="lectin"):
         points["qhigh"],
         zorder=-1,
         label="Posterior predictive distribution",
-        color="gray",
+        color="gainsboro",
     )
     ax.legend(frameon=False)
     ax.set(

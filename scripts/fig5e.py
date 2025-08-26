@@ -33,7 +33,7 @@ def plot_ppc(ax, idata, data, model):
         sct = ax.scatter(x, y)
         qlow, qhigh = np.exp(
             idata.posterior_predictive["log(concentration)"]
-            .quantile([0.05, 0.95], dim=["chain", "draw"])
+            .quantile([0.025, 0.975], dim=["chain", "draw"])
             .to_numpy()[:, ix]
         )
         lines = ax.vlines(
@@ -41,8 +41,7 @@ def plot_ppc(ax, idata, data, model):
             qlow,
             qhigh,
             zorder=-1,
-            color="tab:blue",
-            alpha=0.6,
+            color="gainsboro",
         )
     ax.semilogy()
     ax.set(xlabel="Treatment", ylabel="Concentration")
@@ -52,7 +51,7 @@ def plot_ppc(ax, idata, data, model):
         [sct, lines],
         [
             "Observation (color indicates mouse)",
-            "5%-95% posterior predictive interval",
+            "2.5%-97.5% posterior predictive interval",
         ],
         frameon=False,
     )
