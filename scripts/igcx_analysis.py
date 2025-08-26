@@ -47,22 +47,19 @@ SEED = 1234
 
 
 def plot_ppc(fig, axes, idata, data, model, ycol):
-    treatment_to_x = {"S": 0.4, "E": 0.6}
     plot_df_enzyme, plot_df_saline = (
         data.with_row_index(name="idata_index")
         .filter(treatment=t)
         .sort("mouse")
         .with_row_index()
-        # .with_columns(
-        #     x_mean=pl.col("mouse").map_elements(
-        #         treatment_to_x.get, return_dtype=pl.Float32
-        #     ),
-        #     jitter=np.random.normal(loc=0, scale=0.025, size=len(data)),
-        # )
         .with_columns(x=pl.col("index") / pl.col("index").len())
         for t in ("E", "S")
     )
-    for ax, plot_df in zip(axes, (plot_df_enzyme, plot_df_saline)):
+    for ax, plot_df, title in zip(
+        axes,
+        (plot_df_enzyme, plot_df_saline),
+        ("Enzyme", "Saline"),
+    ):
         for (mouse,), subdf in plot_df.group_by("mouse"):
             x = subdf["x"]
             y = subdf[ycol]
@@ -79,7 +76,7 @@ def plot_ppc(fig, axes, idata, data, model, ycol):
                 zorder=-1,
                 color="gainsboro",
             )
-        ax.set(xlabel="Arbitrary order", ylabel=ycol)
+        ax.set(xlabel="Arbitrary order", ylabel=ycol, title=title)
         ax.set_xticks([])
         # ax.set_xlim(0.3, 0.7)
     fig.legend(
@@ -88,6 +85,7 @@ def plot_ppc(fig, axes, idata, data, model, ycol):
             "Observation (color indicates mouse)",
             "2.5%-97.5% posterior predictive interval",
         ],
+        loc="right",
         frameon=False,
     )
     return fig, axes
