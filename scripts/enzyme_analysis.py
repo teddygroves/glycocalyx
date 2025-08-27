@@ -64,15 +64,20 @@ def plot_ppc_treatment(ax, idata, data, model, ycol):
 
 
 def plot_ppc(ax, idata, data, ycol, model):
-    for (mouse,), subdf in data.with_row_index().group_by("mouse"):
+    for (mouse,), subdf in (
+        data.with_row_index(name="idata_index")
+        .sort("mouse")
+        .with_row_index(name="index")
+        .group_by("mouse")
+    ):
         xcol = f"{ycol}_std"
-        x = subdf[xcol]
+        x = subdf["index"]
         y = subdf[ycol]
-        ix = subdf["index"]
+        ix = subdf["idata_index"]
         sct = ax.scatter(x, y)
         qlow, qhigh = np.exp(
             idata.posterior_predictive[f"log({ycol})"]
-            .quantile([0.05, 0.95], dim=["chain", "draw"])
+            .quantile([0.025, 0.975], dim=["chain", "draw"])
             .to_numpy()[:, ix]
         )
         lines = ax.vlines(
@@ -83,12 +88,13 @@ def plot_ppc(ax, idata, data, ycol, model):
             color="gainsboro",
         )
     ax.semilogy()
-    ax.set(xlabel=xcol, ylabel=ycol)
+    ax.set(xlabel="Arbitrary Order", ylabel=ycol)
+    ax.set_xticks([])
     ax.legend(
         [sct, lines],
         [
             "Observation (color indicates mouse)",
-            "5%-95% posterior predictive interval",
+            "2.5%-97.5% posterior predictive interval",
         ],
         frameon=False,
     )
