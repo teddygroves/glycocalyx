@@ -11,7 +11,7 @@ from glycocalyx.util import standardise
 from glycocalyx.plotting import forestplot
 
 ROOT = Path(__file__).parent.parent
-RAW_DATA_FILE = ROOT / "data" / "raw" / "gcx_project_imax_width.csv"
+RAW_DATA_FILE = ROOT / "data" / "raw" / "imax_width_all_vtyps.csv"
 PREPARED_DATA_FILE = ROOT / "data" / "prepared" / "igcx.csv"
 IDATA_DIR = ROOT / "data" / "results" / "igcx"
 PLOT_DIR = ROOT / "plots" / "igcx"
@@ -27,7 +27,6 @@ FORMULA_I_MAX = (
 FORMULA_FWHM = "{y} ~ 1 + treatment + (1|mouse)"
 YCOLS = ["ln_i_max"]
 YCOL_TO_FORMULA = dict(zip(YCOLS, [FORMULA_I_MAX]))
-BAD_MICE = ["20230511"]
 PRIORS = {
     "treatment": bmb.Prior("Normal", mu=0.0, sigma=0.5),
     "vessel_type": bmb.Prior("Normal", mu=0.0, sigma=0.5),
@@ -93,7 +92,11 @@ def plot_ppc(fig, axes, idata, data, model, ycol):
 
 def prepare_data(raw_data: pl.DataFrame) -> pl.DataFrame:
     return (
-        raw_data.filter(~pl.col("mouse").cast(str).str.contains_any(BAD_MICE))
+        raw_data.remove(  # this capillary has unrealistic values
+            (pl.col("mouse") == 20230511)
+            & (pl.col("vessel_type") == "c")
+            & (pl.col("vessel") == 3.0)
+        )
         .with_columns(
             treatment=pl.col("treatment").map_elements(
                 TREATMENT_CODES.get, return_dtype=pl.String
