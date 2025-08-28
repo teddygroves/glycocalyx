@@ -1,15 +1,15 @@
-# Glycocalyx analysis
+# Statistical analysis of glycocalyx heterogeneity
 
-This repository contains code analysing measurements of glycocalyx density in mice.
+This repository contains statistical analysis of data produced by in vivo two-photon microscopy of fluorescently-labeled glycocalyx in mice
 
 To run the analysis, first install [cmdstanpy](https://mc-stan.org/cmdstanpy/index.html) and [uv](https://docs.astral.sh/uv/). Then run the following commands from the project root:
 
 ```sh
-> uv run scripts/fig5e.py
-> uv run scripts/fig3.py
-> uv run scripts/fig6.py
-> uv run scripts/igcx_analysis.py
-> uv run scripts/enzyme_analysis.py
+> uv run scripts/plasma_hyaluronan.py
+> uv run scripts/rel_gcx_intensity.py
+> uv run scripts/gcx_frap.py
+> uv run scripts/abs_gcx_intenxity.py
+> uv run scripts/gcx_thickness.py
 ```
 
 The shell script `run_analysis.sh` runs all these commands in one go:
