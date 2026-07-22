@@ -92,7 +92,7 @@ def resid_scatter(msts, idata, qlow=0.25, qhigh=0.975, colorcol="lectin"):
 
 
 def prepare_data():
-    pxl_raw = pl.read_csv(RAW_DATA_FILE, infer_schema_length=20000)
+    pxl_raw = pl.read_csv(RAW_DATA_FILE, infer_schema_length=50000)
     pixel = (
         pxl_raw.with_columns(ln_y=np.log(pl.col("I_gcx")))
         .pipe(lambda df: df.with_columns(mouse_vt_ln_mean=get_ln_mean(df)))
